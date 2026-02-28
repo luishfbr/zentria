@@ -1,0 +1,16 @@
+{
+    "name": "zentria",
+    "version": "1.0.0",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "bun run --parallel dev:api",
+        "dev:api": "bun run --cwd apps/api dev"
+    },
+    "dependencies": {
+        "better-auth": "^1.4.20",
+        "zod": "^4.3.6"
+    }
+}
