@@ -1,0 +1,36 @@
+---
+description: Estrutura e convenções do frontend em apps/web
+globs: apps/web/**/*
+alwaysApply: false
+---
+
+# Estrutura do frontend (apps/web)
+
+## Stack
+
+- **Build**: Vite 7
+- **UI**: React 19, Tailwind CSS 4, shadcn/ui (estilo New York, `components.json`)
+- **Router**: TanStack React Router (rotas por ficheiro, `routeTree.gen`)
+- **Auth**: better-auth (cliente em `#/lib/auth-client`, provider em `#/auth`)
+
+## Estrutura em `apps/web/src`
+
+| Pasta / ficheiro | Uso |
+|------------------|-----|
+| `main.tsx` | Entrada: `AuthProvider` → `RouterProvider` com `routeTree.gen` e contexto `auth`. |
+| `auth.tsx` | `AuthProvider` e `useAuth()`; tipo `AuthContext` para o router. |
+| `styles.css` | Estilos globais e Tailwind. |
+| `routes/` | Rotas TanStack: `__root.tsx` (layout + `Outlet`) e uma rota por ficheiro com `createFileRoute`. |
+| `components/` | Componentes de página/feature (ex.: `ThemeToggle`, `loading-page`). |
+| `components/ui/` | Componentes shadcn (Button, Spinner, etc.); adicionar com `npx shadcn@latest add`. |
+| `lib/` | Utilitários e clientes (ex.: `auth-client.ts`, `utils.ts` quando existir). |
+
+## Convenções
+
+- **Imports**: Preferir alias `#/` para código em `src` (ex.: `#/components/ThemeToggle`, `#/lib/auth-client`, `#/auth`). O `components.json` define ainda `#/components`, `#/components/ui`, `#/lib`, `#/hooks`.
+- **Rotas**: Cada rota em `routes/` exporta `Route` via `createFileRoute('/path')()` e o componente da página. O root usa `createRootRouteWithContext<MyRouterContext>()` e inclui `<Outlet />`.
+- **Auth**: O router recebe `context.auth` (tipo `AuthContext`). Usar `useAuth()` em componentes que precisem de sessão.
+- **Componentes reutilizáveis**: Lógica partilhada em `lib/`; componentes visuais em `components/` ou `components/ui/` (shadcn).
+- **Estilos**: Tailwind em `styles.css`; variáveis e tema conforme config do shadcn (baseColor zinc, cssVariables).
+
+Respeitar esta estrutura ao criar páginas, componentes ou refatorar o frontend.

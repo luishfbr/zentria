@@ -1,0 +1,63 @@
+---
+description: Domínio e negócio da Zentria — Performance Esportiva
+alwaysApply: true
+---
+
+# Zentria — Performance Esportiva
+
+## Propósito
+
+Zentria é um **SaaS** de controle e gerenciamento de atletas que buscam alta performance. O aplicativo é voltado para **professores** e/ou **instituições esportivas** que possuem atletas em diferentes modalidades.
+
+## Planos e billing
+
+- **Plano Professor**: um professor, número ilimitado de alunos.
+- **Plano Enterprise**: mais de um professor; valor com base em **alunos ativos**.
+
+Fluxo: o cliente assina o plano → cria sua **organização** (no Enterprise pode ter mais de uma organização).
+
+## Entidades principais
+
+- **Organização(ões)** — criadas pelo cliente após assinatura.
+- **Esportes** — modalidades cadastradas dentro da organização; cada esporte tem **métricas de avaliação** definidas pelo professor responsável.
+- **Professores** e **Alunos/Atletas** — cadastrados na organização.
+
+O professor regista periodicamente os resultados de cada atleta nas métricas. O sistema gera **gráficos de evolução**, permite **comparar atletas** lado a lado e mantém **histórico de lesões** com controle de status em tempo real.
+
+## Roles e acessos
+
+| Role | Acesso |
+|------|--------|
+| **athlete** | Portal limitado: esportes em que participa, evoluções, relatórios. |
+| **professor** | Seus atletas, relatórios de acompanhamento. |
+| **admin** | Criador do clube; configurações da organização. |
+| **superadmin** | Dono do portal (desenvolvimento). |
+
+## Perfil do atleta (quatro áreas)
+
+1. **Resumo** — visão geral e gráfico radar.
+2. **Físico/Técnico** — dados de avaliação.
+3. **Saúde** — histórico de lesões.
+4. **Nutrição** — plano alimentar atual e histórico de dietas.
+
+## Fluxo de domínio
+
+```mermaid
+flowchart LR
+  Cliente --> Plano
+  Plano --> Organizacao
+  Organizacao --> Esportes
+  Organizacao --> Professores
+  Organizacao --> Atletas
+  Esportes --> Metricas
+  Professores --> Registos
+  Atletas --> Perfil
+  Perfil --> Resumo
+  Perfil --> FisicoTecnico
+  Perfil --> Saude
+  Perfil --> Nutricao
+```
+
+## Estrutura técnica
+
+A estrutura do monorepo, da API e do frontend segue as regras **app-structure**, **api-backend-structure** e **web-frontend-structure**. Respeitar o domínio acima ao implementar entidades, roles e funcionalidades.

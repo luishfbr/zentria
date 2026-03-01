@@ -1,0 +1,82 @@
+---
+description: Estrutura do monorepo e da aplicação Zentria
+alwaysApply: true
+---
+
+# Estrutura da aplicação Zentria
+
+## Monorepo
+
+- **Workspaces**: `apps/*` e `packages/*` (definidos no `package.json` raiz). O diretório `packages/` pode estar vazio.
+- **Runtime**: Bun.
+- **Scripts raiz**:
+  - `dev` — inicia API e Web em paralelo (`dev:api`, `dev:web`).
+  - `dev:api` — API em modo watch (porta 8080).
+  - `dev:web` — frontend Vite (porta 3000).
+  - `db:generate`, `db:migrate`, `db:studio`, `auth:generate` — delegam para `apps/api`.
+
+---
+
+## App API (`apps/api`)
+
+- **Framework HTTP**: Elysia.
+- **DB**: Drizzle ORM + PostgreSQL (`drizzle.config.ts` na raiz de `apps/api`).
+- **Auth**: better-auth (plugin Elysia em `src/https/plugins/better-auth.ts`).
+- **E-mail**: Nodemailer; funções em `src/lib/mails/` (ex.: `sendVerificationEmail`, `sendResetPassword`).
+
+### Estrutura de pastas em `apps/api/src`
+
+| Pasta / ficheiro      | Uso |
+|-----------------------|-----|
+| `index.ts`            | Entrada da API: Elysia com CORS, OpenAPI e plugin better-auth; `.listen(8080)`. |
+| `db/client.ts`        | Cliente Drizzle; exportar `db`. |
+| `db/schema/`          | Schema Drizzle; exportar em `db/schema/index.ts`. |
+| `db/migrations/`      | Migrações geradas pelo Drizzle (não editar à mão). |
+| `lib/env.ts`          | Schema Zod das variáveis de ambiente; exportar `env`. |
+| `lib/auth.ts`         | Configuração better-auth; exportar `auth`. |
+| `lib/transporter.ts`  | Instância Nodemailer; exportar `transporter`. |
+| `lib/mails/*.ts`      | Funções de envio (ex.: `sendVerificationEmail`, `sendResetPassword`). |
+| `https/plugins/`      | Plugins Elysia (ex.: `better-auth.ts`). |
+
+### Convenções (API)
+
+- Imports relativos dentro de `apps/api/src`: usar `../` a partir de `lib/`, `db/` ou `https/`.
+- Variáveis de ambiente: centralizar em `lib/env.ts` e usar no resto do código.
+- Novas rotas/plugins HTTP: colocar em `https/` (plugins em `https/plugins/`).
+- Novos módulos reutilizáveis (e-mail, etc.): em `lib/` ou subpastas como `lib/mails/`.
+
+Para detalhes e padrões obrigatórios, ver regra **api-backend-structure**.
+
+---
+
+## App Web (`apps/web`)
+
+- **Build**: Vite 7.
+- **UI**: React 19, Tailwind CSS 4, shadcn/ui (estilo New York, `components.json`).
+- **Router**: TanStack React Router (rotas por ficheiro em `src/routes/`).
+- **Auth**: better-auth (cliente em `src/lib/auth-client.ts`, provider em `src/auth.tsx`).
+
+### Estrutura de pastas em `apps/web/src`
+
+| Pasta / ficheiro   | Uso |
+|--------------------|-----|
+| `main.tsx`         | Entrada: `AuthProvider` → `RouterProvider` com `routeTree.gen` e contexto `auth`. |
+| `auth.tsx`         | `AuthProvider` e `useAuth()`; tipo `AuthContext` para o router. |
+| `styles.css`       | Estilos globais e Tailwind. |
+| `routes/`          | Rotas TanStack: `__root.tsx` (layout + `Outlet`), uma rota por ficheiro com `createFileRoute`. |
+| `components/`      | Componentes de página/feature (ex.: `ThemeToggle.tsx`, `loading-page.tsx`). |
+| `components/ui/`   | Componentes shadcn; adicionar com `npx shadcn@latest add`. |
+| `lib/`             | Utilitários e clientes (ex.: `auth-client.ts`). |
+
+### Convenções (Web)
+
+- Imports: preferir alias `#/` para código em `src` (ex.: `#/components/ThemeToggle`, `#/lib/auth-client`, `#/auth`).
+- Rotas: cada ficheiro em `routes/` exporta `Route` via `createFileRoute('/path')()` e o componente da página.
+- Auth: o router recebe `context.auth`; usar `useAuth()` nos componentes que precisem de sessão.
+- Componentes reutilizáveis: lógica em `lib/`; visuais em `components/` ou `components/ui/`.
+
+Para detalhes e convenções do frontend, ver regra **web-frontend-structure**.
+
+---
+
+Respeitar esta estrutura ao criar ficheiros, rotas ou refatorar em qualquer app.

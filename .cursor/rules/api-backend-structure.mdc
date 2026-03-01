@@ -1,0 +1,77 @@
+---
+description: Estrutura e convenções do backend API (apps/api) para manter padrão nas construções
+globs: apps/api/**/*
+alwaysApply: false
+---
+
+# Backend API — Estrutura e padrões (apps/api)
+
+## Stack
+
+- **HTTP**: Elysia
+- **DB**: Drizzle ORM + PostgreSQL (config em `drizzle.config.ts` na raiz de `apps/api`)
+- **Auth**: better-auth (plugin em `src/https/plugins/better-auth.ts`)
+- **E-mail**: Nodemailer (`src/lib/transporter.ts` + funções em `src/lib/mails/`)
+- **Runtime**: Bun
+
+## Estrutura de pastas em `apps/api/src`
+
+| Localização | Uso |
+|-------------|-----|
+| `index.ts` | Entrada: instância Elysia, CORS, OpenAPI, plugins; `.use(plugin)` e `.listen(8080)`. |
+| `db/client.ts` | Cliente Drizzle com `schema` e `env.DATABASE_URL`; exportar `db`. |
+| `db/schema/` | Tabelas e schema Drizzle; exportar objeto `schema` em `db/schema/index.ts`. |
+| `db/migrations/` | Migrações geradas pelo Drizzle (não editar à mão). |
+| `lib/env.ts` | Schema Zod das variáveis de ambiente; `parse(Bun.env)`; exportar `env`. |
+| `lib/auth.ts` | Configuração better-auth (adapters, e-mail, sessão); exportar `auth`. |
+| `lib/transporter.ts` | Instância Nodemailer usando `env`; exportar `transporter`. |
+| `lib/mails/*.ts` | Funções de envio (ex.: `SendVerificationEmail`, `SendResetPassword`); usar `env` e `transporter`. |
+| `https/plugins/*.ts` | Plugins Elysia (ex.: better-auth); exportar instância `new Elysia().use(...)`. |
+
+## Convenções obrigatórias
+
+### Imports
+
+- Dentro de `src/`: usar caminhos relativos (`../lib/...`, `../db/...`, `../https/...`).
+- Variáveis de ambiente: **sempre** via `lib/env.ts` — nunca `process.env`/`Bun.env` direto no resto do código.
+- Cliente DB: importar `db` de `db/client.ts`; schema de `db/schema` (ou via client).
+
+### Novos ficheiros
+
+- **Rotas/plugins HTTP** → `https/` (plugins em `https/plugins/`).
+- **Lógica reutilizável** (e-mail, utils, serviços) → `lib/` ou subpastas (ex.: `lib/mails/`).
+- **Tabelas e tipos de DB** → `db/schema/`; manter `drizzle.config.ts` com `schema: './src/db/schema/**'`.
+- **Configuração** (env, auth, transporter) → `lib/`.
+
+### Drizzle
+
+- `drizzle.config.ts`: usar `env` de `./src/lib/env` para `dbCredentials.url`; `out: './src/db/migrations'`, `schema: './src/db/schema/**'`, `casing: 'snake_case'`.
+- Migrações: gerar com `db:generate`, aplicar com `db:migrate` (scripts em `apps/api`).
+
+### Elysia
+
+- Plugins: criar com `new Elysia({ name: '...' })` e exportar para uso em `index.ts` com `.use(plugin)`.
+- Abstrações de auth/sessão: preferir macros ou derivados do plugin better-auth.
+
+### E-mail
+
+- Novas funções de envio: ficheiros em `lib/mails/`, assinatura explícita (ex.: `{ email: string, url: string }`), uso de `transporter` e `env.EMAIL_*`.
+
+## Exemplo de padrão
+
+```ts
+// lib/env.ts — centralizar env
+const envSchema = z.object({ DATABASE_URL: z.url()... });
+export const env = envSchema.parse(Bun.env);
+
+// db/client.ts — um cliente, com schema
+import { env } from '../lib/env';
+import { schema } from './schema';
+export const db = drizzle({ schema, connection: { connectionString: env.DATABASE_URL, ssl: true } });
+
+// https/plugins/meu-plugin.ts — plugin Elysia
+import Elysia from 'elysia';
+export const meuPlugin = new Elysia({ name: 'meu-plugin' }).get('/x', () => ({ ok: true }));
+```
+
+Respeitar esta estrutura ao criar rotas, plugins, módulos em `lib/`, alterações de schema ou refatorações em `apps/api`.
