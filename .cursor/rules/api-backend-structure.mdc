@@ -18,15 +18,43 @@ alwaysApply: false
 
 | Localização | Uso |
 |-------------|-----|
-| `index.ts` | Entrada: instância Elysia, CORS, OpenAPI, plugins; `.use(plugin)` e `.listen(8080)`. |
+| `index.ts` | Entrada: instância Elysia, CORS, OpenAPI, better-auth, plugin `api`; `.listen(8080)`. |
 | `db/client.ts` | Cliente Drizzle com `schema` e `env.DATABASE_URL`; exportar `db`. |
-| `db/schema/` | Tabelas e schema Drizzle; exportar objeto `schema` em `db/schema/index.ts`. |
+| `db/schema/index.ts` | Agrega domínios: `export *` e objeto `schema = { ...auth, ...sports, ...evaluations, ...health, ...nutrition }`. |
+| `db/schema/auth/` | Schema better-auth + org: users, sessions, accounts, verifications, organizations, members, invitations; relations; exportar em `auth/index.ts`. |
+| `db/schema/sports/` | sports, sports_metrics, athlete_sports; relations; index. |
+| `db/schema/evaluations/` | evaluations, evaluation_results; relations; index. |
+| `db/schema/health/` | injuries; relations; index. |
+| `db/schema/nutrition/` | diet_plans, diet_plan_items; relations; index. |
+| `db/schema/<domínio>/` | Novos domínios: tabelas (`.ts`), `relations.ts`, `index.ts`; depois registar em `db/schema/index.ts`. |
 | `db/migrations/` | Migrações geradas pelo Drizzle (não editar à mão). |
 | `lib/env.ts` | Schema Zod das variáveis de ambiente; `parse(Bun.env)`; exportar `env`. |
-| `lib/auth.ts` | Configuração better-auth (adapters, e-mail, sessão); exportar `auth`. |
+| `lib/auth.ts` | Configuração better-auth (adapters, e-mail, sessão, org); exportar `auth`. |
+| `lib/ids.ts` | `randomUUIDV7()` (Bun.randomUUIDv7); usar como `$defaultFn` em colunas `id` dos schemas. |
+| `lib/org-access.ts` | Acesso por organização: `getMemberInOrg`, `requireRole`, `canAccessMember`; tipos `MemberWithOrg`, `MemberRole`. |
 | `lib/transporter.ts` | Instância Nodemailer usando `env`; exportar `transporter`. |
-| `lib/mails/*.ts` | Funções de envio (ex.: `SendVerificationEmail`, `SendResetPassword`); usar `env` e `transporter`. |
-| `https/plugins/*.ts` | Plugins Elysia (ex.: better-auth); exportar instância `new Elysia().use(...)`. |
+| `lib/mails/*.ts` | Funções de envio (ex.: `sendVerificationEmail`, `sendResetPassword`); usar `env` e `transporter`. |
+| `https/plugins/better-auth.ts` | Plugin better-auth; exportar plugin e OpenAPI. |
+| `https/plugins/api.ts` | Plugin agregador: prefix `/api`, usa `apiGuard` e plugins por domínio (members, sports, evaluations, health, nutrition). |
+| `https/plugins/api-guard.ts` | Guard: deriva `session`, `member`, `organizationId` a partir do path `/api/organizations/:orgId/...`; 401 se não autenticado, 403 se org presente e utilizador não membro. |
+| `https/plugins/api-members.ts` | Rotas de membros da organização. |
+| `https/plugins/api-sports.ts` | Rotas de esportes e métricas. |
+| `https/plugins/api-evaluations.ts` | Rotas de avaliações e resultados. |
+| `https/plugins/api-health.ts` | Rotas de lesões (health). |
+| `https/plugins/api-nutrition.ts` | Rotas de planos alimentares. |
+
+### Schema por domínio (`db/schema/`)
+
+- **`db/schema/index.ts`**: re-exporta cada domínio (`export * from "./auth"`, etc.) e define `schema = { ...auth, ...sports, ...evaluations, ...health, ...nutrition }`. Ao criar um novo domínio, adicionar `export * from "./<domínio>"` e incluir no objeto `schema`.
+- **Domínio `auth/`** (better-auth + organizações):
+  - **Tabelas**: `users`, `sessions`, `accounts`, `verifications`, `organizations`, `members`, `invitations`.
+  - **Relations**: users, sessions, accounts, organizations, members, invitations.
+  - Ficheiros: `users.ts`, `sessions.ts`, `accounts.ts`, `verifications.ts`, `organizations.ts`, `members.ts`, `invitations.ts`, `relations.ts`, `index.ts`.
+- **Domínio `sports/`**: `sports`, `sports_metrics`, `athlete_sports`; relations; index.
+- **Domínio `evaluations/`**: `evaluations`, `evaluation_results`; relations; index.
+- **Domínio `health/`**: `injuries`; relations; index.
+- **Domínio `nutrition/`**: `diet_plans`, `diet_plan_items`; relations; index.
+- **Novos domínios**: criar subpasta `db/schema/<domínio>/` com tabelas em ficheiros `.ts`, `relations.ts` com `relations()`, e `index.ts`; registar em `db/schema/index.ts`. Usar `casing: 'snake_case'` (Drizzle config). Coluna `id`: `.$defaultFn(() => randomUUIDV7())` com `randomUUIDV7` de `lib/ids`.
 
 ## Convenções obrigatórias
 
@@ -35,23 +63,27 @@ alwaysApply: false
 - Dentro de `src/`: usar caminhos relativos (`../lib/...`, `../db/...`, `../https/...`).
 - Variáveis de ambiente: **sempre** via `lib/env.ts` — nunca `process.env`/`Bun.env` direto no resto do código.
 - Cliente DB: importar `db` de `db/client.ts`; schema de `db/schema` (ou via client).
+- IDs em schemas: importar `randomUUIDV7` de `../../../lib/ids` (a partir de `db/schema/<domínio>/`).
 
 ### Novos ficheiros
 
-- **Rotas/plugins HTTP** → `https/` (plugins em `https/plugins/`).
-- **Lógica reutilizável** (e-mail, utils, serviços) → `lib/` ou subpastas (ex.: `lib/mails/`).
-- **Tabelas e tipos de DB** → `db/schema/`; manter `drizzle.config.ts` com `schema: './src/db/schema/**'`.
+- **Rotas/plugins HTTP** → `https/` (plugins em `https/plugins/`). Rotas da API de negócio sob o prefix `/api` via `apiPlugin`; novo domínio = novo plugin (ex.: `api-xyz.ts`) e registo em `https/plugins/api.ts`.
+- **Lógica reutilizável** (e-mail, utils, serviços, acesso por org) → `lib/` ou subpastas (ex.: `lib/mails/`).
+- **Tabelas e tipos de DB** → `db/schema/` em subpastas por domínio; cada domínio com `index.ts`, tabelas e `relations.ts`; agregar em `db/schema/index.ts`.
 - **Configuração** (env, auth, transporter) → `lib/`.
 
 ### Drizzle
 
-- `drizzle.config.ts`: usar `env` de `./src/lib/env` para `dbCredentials.url`; `out: './src/db/migrations'`, `schema: './src/db/schema/**'`, `casing: 'snake_case'`.
+- `drizzle.config.ts`: usar `env` de `./src/lib/env` para `dbCredentials.url`; `out: './src/db/migrations'`, `schema: './src/db/schema/**'`, `dialect: 'postgresql'`, `casing: 'snake_case'`.
 - Migrações: gerar com `db:generate`, aplicar com `db:migrate` (scripts em `apps/api`).
+- Schema: objeto `schema` em `db/schema/index.ts` agrega todos os domínios; o cliente em `db/client.ts` importa `schema` desse ficheiro.
+- Novas tabelas: `id` com `.$defaultFn(() => randomUUIDV7())`; FKs com `onDelete: "cascade"` ou `"set null"` conforme o negócio; índices em FKs e em campos de filtro.
 
-### Elysia
+### Elysia e API
 
-- Plugins: criar com `new Elysia({ name: '...' })` e exportar para uso em `index.ts` com `.use(plugin)`.
-- Abstrações de auth/sessão: preferir macros ou derivados do plugin better-auth.
+- **Entrada**: `index.ts` usa `.use(betterAuthPlugin)` e `.use(apiPlugin)`. Todas as rotas de negócio estão sob `apiPlugin` (prefix `/api`).
+- **apiGuard**: fornece `session`, `member`, `organizationId` (derivados do path). Rotas em `/api/organizations/:organizationId/...` exigem sessão e que o utilizador seja membro da organização; usar `member` e `lib/org-access` (ex.: `requireRole`, `canAccessMember`) para autorização por role.
+- Plugins de domínio: criar com `new Elysia({ name: 'api-...' })` e exportar; registar em `https/plugins/api.ts` com `.use(apiXxx)`.
 
 ### E-mail
 
@@ -64,14 +96,22 @@ alwaysApply: false
 const envSchema = z.object({ DATABASE_URL: z.url()... });
 export const env = envSchema.parse(Bun.env);
 
+// lib/ids.ts — IDs nas tabelas
+export const randomUUIDV7 = (): string => Bun.randomUUIDv7();
+
 // db/client.ts — um cliente, com schema
 import { env } from '../lib/env';
 import { schema } from './schema';
 export const db = drizzle({ schema, connection: { connectionString: env.DATABASE_URL, ssl: true } });
 
-// https/plugins/meu-plugin.ts — plugin Elysia
-import Elysia from 'elysia';
-export const meuPlugin = new Elysia({ name: 'meu-plugin' }).get('/x', () => ({ ok: true }));
+// https/plugins/api.ts — agregador
+export const apiPlugin = new Elysia({ name: "api", prefix: "/api" })
+  .use(apiGuard)
+  .use(apiMembers)
+  .use(apiSports) ...
+
+// https/plugins/api-guard.ts — session, member, organizationId + 401/403
+// Rotas recebem { session, member, organizationId } quando em /api/organizations/:id/...
 ```
 
 Respeitar esta estrutura ao criar rotas, plugins, módulos em `lib/`, alterações de schema ou refatorações em `apps/api`.

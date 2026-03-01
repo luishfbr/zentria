@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db/client";
 import { SendResetPassword } from "./mails/sendResetPassword";
 import { SendVerificationEmail } from "./mails/sendVerificationEmail";
-import { openAPI } from "better-auth/plugins";
+import { admin, openAPI, organization } from "better-auth/plugins";
 
 export const auth = betterAuth({
     basePath: "/auth",
@@ -44,6 +44,8 @@ export const auth = betterAuth({
         }
     },
     plugins: [
+        admin(),
+        organization(),
         openAPI()
     ]
 });
