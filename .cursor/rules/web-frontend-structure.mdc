@@ -12,25 +12,88 @@ alwaysApply: false
 - **UI**: React 19, Tailwind CSS 4, shadcn/ui (estilo New York, `components.json`)
 - **Router**: TanStack React Router (rotas por ficheiro, `routeTree.gen`)
 - **Auth**: better-auth (cliente em `#/lib/auth-client`, provider em `#/auth`)
+- **API**: tipos e hooks em `@zentria/shared` (ver regra **shared-package-and-api-web**)
 
 ## Estrutura em `apps/web/src`
 
 | Pasta / ficheiro | Uso |
 |------------------|-----|
 | `main.tsx` | Entrada: `AuthProvider` → `RouterProvider` com `routeTree.gen` e contexto `auth`. |
+| `router.tsx` | Opcional: instância do router; tipagem para TanStack Router. |
 | `auth.tsx` | `AuthProvider` e `useAuth()`; tipo `AuthContext` para o router. |
-| `styles.css` | Estilos globais e Tailwind. |
+| `styles.css` | Estilos globais, variáveis CSS e Tailwind. |
 | `routes/` | Rotas TanStack: `__root.tsx` (layout + `Outlet`) e uma rota por ficheiro com `createFileRoute`. |
+| `routes/__root.tsx` | Root com `createRootRouteWithContext<MyRouterContext>()`, import de `styles.css`, `<Outlet />`. |
 | `components/` | Componentes de página/feature (ex.: `ThemeToggle`, `loading-page`). |
-| `components/ui/` | Componentes shadcn (Button, Spinner, etc.); adicionar com `npx shadcn@latest add`. |
-| `lib/` | Utilitários e clientes (ex.: `auth-client.ts`, `utils.ts` quando existir). |
+| `components/ui/` | Componentes shadcn (Button, Card, Sidebar, Sheet, Table, Form, etc.); adicionar com `npx shadcn@latest add`. |
+| `lib/` | Utilitários e clientes (ex.: `auth-client.ts`, `utils.ts`). |
+| `hooks/` | Hooks reutilizáveis (ex.: `use-mobile.ts` para sidebar responsiva). |
+
+### Componentes UI disponíveis (shadcn)
+
+Entre outros: `alert`, `avatar`, `badge`, `breadcrumb`, `button`, `card`, `chart`, `checkbox`, `dialog`, `dropdown-menu`, `form`, `input`, `label`, `sidebar`, `skeleton`, `sheet`, `table`, `tabs`, `tooltip`. Usar `components.json` e adicionar novos com `bunx shadcn@latest add <component>`.
+
+---
+
+## Layout moderno (inspirado Supabase)
+
+Padronizar o layout da aplicação em **app shell** claro e responsivo, alinhado a dashboards modernos (ex.: Supabase Dashboard):
+
+1. **App shell**
+   - **Sidebar** (colapsável): navegação por grupos, ícones Lucide, estado expandido/colapsado; em mobile usar `Sheet` sobre o conteúdo.
+   - **Header**: barra fixa com breadcrumbs (`Breadcrumb`), título da secção e ações (botões, user menu).
+   - **Main**: área de conteúdo com padding consistente (`p-4`/`p-6`), scroll independente.
+
+2. **Estrutura de página**
+   - Páginas autenticadas: layout com `SidebarProvider` + `Sidebar` + área principal onde o `Outlet` renderiza a página.
+   - Cada página: título (h1), descrição opcional, depois conteúdo em cards ou tabelas.
+   - Listas: usar `Table` com ações por linha; estados vazios com componente `Empty` ou equivalente.
+
+3. **Consistência visual**
+   - Cores e tema: variáveis em `styles.css`; baseColor zinc e `cssVariables: true` no shadcn.
+   - Espaçamento: usar escala Tailwind (4, 6, 8) de forma consistente.
+   - Feedback: loading com `Skeleton` ou `Spinner`; toasts com `sonner` quando existir.
+
+4. **Rotas e layouts**
+   - Rotas públicas (landing, login): sem sidebar.
+   - Rotas autenticadas: layout partilhado (ex.: `_authenticated.tsx`) que renderiza sidebar + header + `<Outlet />`; rotas filhas definem título e conteúdo.
+
+---
+
+## Princípios SOLID nos componentes
+
+Aplicar SOLID na construção e organização dos componentes:
+
+### S — Single Responsibility
+- **Um componente, uma responsabilidade.** Ex.: um componente que mostra a lista de membros não deve conter lógica de criação de organização.
+- Extrair subcomponentes quando um ficheiro faz render + fetching + form + validação; preferir um componente por “papel” (lista, linha, formulário, cabeçalho).
+
+### O — Open/Closed
+- **Aberto para extensão, fechado para modificação.** Preferir composição e variantes em vez de alterar o componente base.
+- Usar **compound components** (ex.: `Sidebar.Trigger`, `Sidebar.Content`) e **variants** (CVA) para variar comportamento e estilo sem mudar o código interno.
+- Novos casos: novos componentes que consomem os base ou novas variantes, não `if (tipo === 'x')` dentro do mesmo componente.
+
+### L — Liskov Substitution
+- **Subtipos devem ser substituíveis.** Variantes do mesmo componente (ex.: `Button` com `variant="ghost" | default | destructive")` devem poder ser trocadas sem quebrar o layout ou acessibilidade.
+- Componentes que “estendem” outros (ex.: `SubmitButton` que usa `Button`) devem respeitar as mesmas props de interface onde fizer sentido.
+
+### I — Interface Segregation
+- **Interfaces pequenas e específicas.** Evitar “god props”; separar props de dados (ex.: `items`, `member`) das de apresentação (ex.: `variant`, `size`, `className`).
+- Se um componente recebe muitas props opcionais, considerar dividir em subcomponentes ou em props agrupadas (ex.: `slotProps` para partes internas).
+
+### D — Dependency Inversion
+- **Depender de abstrações, não de implementações.** Componentes devem depender de hooks e contexto (ex.: `useAuth()`, `useSidebar()`) e receber dados por **props** quando forem reutilizáveis.
+- Não importar serviços ou funções concretas de API dentro de componentes de apresentação; usar hooks (ex.: do `@zentria/shared`) no nível da página ou de um container e passar dados para componentes “burros”.
+
+---
 
 ## Convenções
 
-- **Imports**: Preferir alias `#/` para código em `src` (ex.: `#/components/ThemeToggle`, `#/lib/auth-client`, `#/auth`). O `components.json` define ainda `#/components`, `#/components/ui`, `#/lib`, `#/hooks`.
+- **Imports**: Preferir alias `#/` para código em `src` (ex.: `#/components/ThemeToggle`, `#/lib/auth-client`, `#/auth`, `#/hooks/use-mobile`). O `components.json` define `#/components`, `#/components/ui`, `#/lib`, `#/hooks`.
 - **Rotas**: Cada rota em `routes/` exporta `Route` via `createFileRoute('/path')()` e o componente da página. O root usa `createRootRouteWithContext<MyRouterContext>()` e inclui `<Outlet />`.
 - **Auth**: O router recebe `context.auth` (tipo `AuthContext`). Usar `useAuth()` em componentes que precisem de sessão.
 - **Componentes reutilizáveis**: Lógica partilhada em `lib/`; componentes visuais em `components/` ou `components/ui/` (shadcn).
 - **Estilos**: Tailwind em `styles.css`; variáveis e tema conforme config do shadcn (baseColor zinc, cssVariables).
+- **Chamadas à API**: Usar tipos e hooks gerados em `@zentria/shared`; configurar cliente (baseURL, credenciais) conforme regra **shared-package-and-api-web**.
 
-Respeitar esta estrutura ao criar páginas, componentes ou refatorar o frontend.
+Respeitar esta estrutura, o layout em app shell (sidebar + header + main) e os princípios SOLID ao criar páginas, componentes ou refatorar o frontend.

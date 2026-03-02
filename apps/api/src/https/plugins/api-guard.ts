@@ -1,52 +1,45 @@
 import Elysia from "elysia";
 import { auth } from "../../lib/auth";
-import { getMemberInOrg } from "../../lib/org-access";
-import type { MemberWithOrg } from "../../lib/org-access";
+import { getMemberInOrg, type MemberWithOrg } from "../../lib/org-access";
 
-const API_ORGANIZATIONS_PREFIX = "/api/organizations/";
-
-function getOrganizationIdFromPath(pathname: string): string | null {
-  if (!pathname.startsWith(API_ORGANIZATIONS_PREFIX)) return null;
-  const rest = pathname.slice(API_ORGANIZATIONS_PREFIX.length);
-  const idx = rest.indexOf("/");
-  if (idx === -1) return rest || null;
-  return rest.slice(0, idx) || null;
-}
-
-export type ApiContext = {
-  session: { user: { id: string; email: string; name?: string }; session: object } | null;
-  member: MemberWithOrg | null;
-  organizationId: string | null;
+/** Contexto adicionado pelo api-guard; usado nos plugins de domínio para tipar o context. */
+export type ApiContextAdd = {
+  session: { user: { id: string } };
+  member: MemberWithOrg;
+  organizationId: string;
 };
 
+/**
+ * Guard para rotas sob /api/organizations/:organizationId.
+ * Deve ser usado dentro de um .group("/organizations/:organizationId", ...).
+ * Obtém organizationId exclusivamente de params.organizationId (context Elysia).
+ * Expõe session, member e organizationId aos handlers via derive.
+ */
 export const apiGuard = new Elysia({ name: "api-guard" })
-  .derive(async ({ request }): Promise<ApiContext> => {
-    const session = await auth.api.getSession({ headers: request.headers });
-    const pathname = new URL(request.url).pathname;
-    const organizationId = getOrganizationIdFromPath(pathname);
-
+  .derive(async ({ params, request }) => {
+    const organizationId = params.organizationId as string;
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
     if (!session) {
-      return { session: null, member: null, organizationId };
+      return {
+        session: null,
+        member: null,
+        organizationId,
+      } as const;
     }
-
-    if (!organizationId) {
-      return { session, member: null, organizationId: null };
-    }
-
     const member = await getMemberInOrg(session.user.id, organizationId);
-    return { session, member, organizationId };
+    return {
+      session,
+      member,
+      organizationId,
+    } as const;
   })
-  .onBeforeHandle(({ session, member, organizationId }) => {
+  .onBeforeHandle(({ session, member, status }) => {
     if (!session) {
-      return new Response(
-        JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Unauthorized" } }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+      return status(401, { message: "Unauthorized" });
     }
-    if (organizationId && !member) {
-      return new Response(
-        JSON.stringify({ error: { code: "FORBIDDEN", message: "Not a member of this organization" } }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
+    if (!member) {
+      return status(403, { message: "Forbidden" });
     }
   });

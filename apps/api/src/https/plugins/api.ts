@@ -6,10 +6,16 @@ import { apiEvaluations } from "./api-evaluations";
 import { apiHealth } from "./api-health";
 import { apiNutrition } from "./api-nutrition";
 
-export const apiPlugin = new Elysia({ name: "Zentria API", prefix: "/v1/api" })
-  .use(apiGuard)
-  .use(apiMembers)
-  .use(apiSports)
-  .use(apiEvaluations)
-  .use(apiHealth)
-  .use(apiNutrition);
+export const apiPlugin = new Elysia({ name: "api", prefix: "/api", detail:{
+  tags: ["Zentria API"]
+} }).group(
+  "/organizations/:organizationId",
+  (app) =>
+    app
+      .use(apiGuard)
+      .use(apiMembers)
+      .use(apiSports)
+      .use(apiEvaluations)
+      .use(apiHealth)
+      .use(apiNutrition)
+);

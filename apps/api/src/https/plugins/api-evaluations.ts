@@ -1,265 +1,242 @@
-import Elysia from "elysia";
-import { t } from "elysia";
-import { eq, and, desc } from "drizzle-orm";
+import Elysia, { t } from "elysia";
+import { eq, and } from "drizzle-orm";
 import { db } from "../../db/client";
-import { members } from "../../db/schema/auth";
 import { evaluations, evaluationResults } from "../../db/schema/evaluations";
 import { sportsMetrics } from "../../db/schema/sports";
-import { canAccessMember } from "../../lib/org-access";
+import { athleteSports } from "../../db/schema/sports";
+import { members } from "../../db/schema/auth";
+import { canAccessMember, requireRole } from "../../lib/org-access";
+import type { ApiContextAdd } from "./api-guard";
 
-async function ensureMemberInOrg(memberId: string, organizationId: string) {
-  const [row] = await db
-    .select()
-    .from(members)
-    .where(
-      and(
-        eq(members.id, memberId),
-        eq(members.organizationId, organizationId)
-      )
-    )
-    .limit(1);
-  return row ?? null;
-}
-
-export const apiEvaluations = new Elysia({ name: "api-evaluations" })
+export const apiEvaluations = new Elysia({
+  name: "api-evaluations",
+  detail: { tags: ["Evaluations"] },
+})
   .get(
-    "/organizations/:organizationId/members/:memberId/evaluations",
-    async ({ member, organizationId, params, query }) => {
-      if (!member || !organizationId) throw new Error("Guard should ensure member");
-      if (!canAccessMember(member, params.memberId)) {
-        return new Response(
-          JSON.stringify({ error: { code: "FORBIDDEN", message: "Cannot access this member" } }),
-          { status: 403, headers: { "Content-Type": "application/json" } }
-        );
+    "/members/:memberId/evaluations",
+    async (ctx) => {
+      const { params, query, member, organizationId, status } = ctx as typeof ctx & ApiContextAdd;
+      const { memberId } = params;
+      if (!canAccessMember(member, memberId)) {
+        return status(403, { message: "Forbidden" });
       }
-      const target = await ensureMemberInOrg(params.memberId, organizationId);
-      if (!target) {
-        return new Response(
-          JSON.stringify({ error: { code: "NOT_FOUND", message: "Member not found" } }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
+      const conditions = [eq(evaluations.memberId, memberId)];
+      if (query.sportId) {
+        conditions.push(eq(evaluations.sportId, query.sportId));
       }
-      const limit = Math.min(Number(query?.limit) ?? 50, 100);
-      const offset = Number(query?.offset) ?? 0;
-      const conditions = [eq(evaluations.memberId, params.memberId)];
-      if (query?.sportId) conditions.push(eq(evaluations.sportId, query.sportId));
       const rows = await db
         .select()
         .from(evaluations)
-        .where(and(...conditions))
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(evaluations.evaluatedAt));
-      return { data: rows };
+        .where(and(...conditions));
+      return rows;
     },
     {
       query: t.Object({
-        limit: t.Optional(t.Numeric()),
-        offset: t.Optional(t.Numeric()),
         sportId: t.Optional(t.String()),
       }),
-      detail: { tags: ["Evaluations"], summary: "List member evaluations" },
     }
   )
   .post(
-    "/organizations/:organizationId/members/:memberId/evaluations",
-    async ({ member, organizationId, params, body, session }) => {
-      if (!member || !organizationId || !session) throw new Error("Guard should ensure member");
-      if (!canAccessMember(member, params.memberId)) {
-        return new Response(
-          JSON.stringify({ error: { code: "FORBIDDEN", message: "Cannot access this member" } }),
-          { status: 403, headers: { "Content-Type": "application/json" } }
-        );
+    "/members/:memberId/evaluations",
+    async (ctx) => {
+      const { params, body, session, member, organizationId, status } = ctx as typeof ctx & ApiContextAdd;
+      const { memberId } = params;
+      const canCreateForOther = requireRole(member, ["coach", "admin", "superadmin"]);
+      if (member.id !== memberId && !canCreateForOther) {
+        return status(403, { message: "Forbidden" });
       }
-      const target = await ensureMemberInOrg(params.memberId, organizationId);
-      if (!target) {
-        return new Response(
-          JSON.stringify({ error: { code: "NOT_FOUND", message: "Member not found" } }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
+      const [orgMember] = await db
+        .select()
+        .from(members)
+        .where(
+          and(
+            eq(members.id, memberId),
+            eq(members.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+      if (!orgMember) return status(404, { message: "Member not found" });
+      const [athleteSport] = await db
+        .select()
+        .from(athleteSports)
+        .where(
+          and(
+            eq(athleteSports.memberId, memberId),
+            eq(athleteSports.sportId, body.sportId)
+          )
+        )
+        .limit(1);
+      if (!athleteSport) {
+        return status(400, { message: "Member is not enrolled in this sport" });
       }
-      const evaluatedAt = new Date(body.evaluatedAt);
-      const [created] = await db
+      const now = new Date();
+      const evaluatedAt = body.evaluatedAt ? new Date(body.evaluatedAt) : now;
+      const [evalRow] = await db
         .insert(evaluations)
         .values({
-          memberId: params.memberId,
+          memberId,
           sportId: body.sportId,
           evaluatedAt,
           recordedBy: session.user.id,
-          createdAt: new Date(),
+          createdAt: now,
         })
         .returning();
-      if (body.results?.length) {
+      if (!evalRow) return status(500, { message: "Insert failed" });
+      if (body.results && body.results.length > 0) {
+        const resultNow = new Date();
         await db.insert(evaluationResults).values(
           body.results.map((r: { sportMetricId: string; value: string }) => ({
-            evaluationId: created.id,
+            evaluationId: evalRow.id,
             sportMetricId: r.sportMetricId,
             value: r.value,
-            createdAt: new Date(),
+            createdAt: resultNow,
           }))
         );
       }
-      const results = await db
+      const withResults = await db
         .select()
         .from(evaluationResults)
-        .where(eq(evaluationResults.evaluationId, created.id));
-      return { data: { ...created, results } };
+        .where(eq(evaluationResults.evaluationId, evalRow.id));
+      return { ...evalRow, results: withResults };
     },
     {
       body: t.Object({
         sportId: t.String(),
-        evaluatedAt: t.String(),
+        evaluatedAt: t.Optional(t.String()),
         results: t.Optional(
-          t.Array(t.Object({ sportMetricId: t.String(), value: t.String() }))
+          t.Array(
+            t.Object({
+              sportMetricId: t.String(),
+              value: t.String(),
+            })
+          )
         ),
       }),
-      detail: { tags: ["Evaluations"], summary: "Create evaluation" },
     }
   )
   .get(
-    "/organizations/:organizationId/members/:memberId/evaluations/:evaluationId",
-    async ({ member, organizationId, params }) => {
-      if (!member || !organizationId) throw new Error("Guard should ensure member");
-      if (!canAccessMember(member, params.memberId)) {
-        return new Response(
-          JSON.stringify({ error: { code: "FORBIDDEN", message: "Cannot access this member" } }),
-          { status: 403, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      const target = await ensureMemberInOrg(params.memberId, organizationId);
-      if (!target) {
-        return new Response(
-          JSON.stringify({ error: { code: "NOT_FOUND", message: "Member not found" } }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
+    "/members/:memberId/evaluations/:evaluationId",
+    async (ctx) => {
+      const { params, member, status } = ctx as typeof ctx & ApiContextAdd;
+      const { memberId, evaluationId } = params;
+      if (!canAccessMember(member, memberId)) {
+        return status(403, { message: "Forbidden" });
       }
       const [evalRow] = await db
         .select()
         .from(evaluations)
         .where(
           and(
-            eq(evaluations.id, params.evaluationId),
-            eq(evaluations.memberId, params.memberId)
+            eq(evaluations.id, evaluationId),
+            eq(evaluations.memberId, memberId)
           )
         )
         .limit(1);
-      if (!evalRow) {
-        return new Response(
-          JSON.stringify({ error: { code: "NOT_FOUND", message: "Evaluation not found" } }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
-      }
+      if (!evalRow) return status(404, { message: "Not found" });
       const results = await db
         .select({
           id: evaluationResults.id,
+          evaluationId: evaluationResults.evaluationId,
           sportMetricId: evaluationResults.sportMetricId,
           value: evaluationResults.value,
+          createdAt: evaluationResults.createdAt,
           metricName: sportsMetrics.name,
           metricUnit: sportsMetrics.unit,
         })
         .from(evaluationResults)
         .leftJoin(sportsMetrics, eq(evaluationResults.sportMetricId, sportsMetrics.id))
-        .where(eq(evaluationResults.evaluationId, params.evaluationId));
-      return { data: { ...evalRow, results } };
-    },
-    { detail: { tags: ["Evaluations"], summary: "Get evaluation by id" } }
+        .where(eq(evaluationResults.evaluationId, evaluationId));
+      return { ...evalRow, results };
+    }
   )
   .put(
-    "/organizations/:organizationId/members/:memberId/evaluations/:evaluationId",
-    async ({ member, organizationId, params, body }) => {
-      if (!member || !organizationId) throw new Error("Guard should ensure member");
-      if (!canAccessMember(member, params.memberId)) {
-        return new Response(
-          JSON.stringify({ error: { code: "FORBIDDEN", message: "Cannot access this member" } }),
-          { status: 403, headers: { "Content-Type": "application/json" } }
-        );
+    "/members/:memberId/evaluations/:evaluationId",
+    async (ctx) => {
+      const { params, body, member, status } = ctx as typeof ctx & ApiContextAdd;
+      const { memberId, evaluationId } = params;
+      if (!canAccessMember(member, memberId)) {
+        return status(403, { message: "Forbidden" });
       }
       const [existing] = await db
         .select()
         .from(evaluations)
         .where(
           and(
-            eq(evaluations.id, params.evaluationId),
-            eq(evaluations.memberId, params.memberId)
+            eq(evaluations.id, evaluationId),
+            eq(evaluations.memberId, memberId)
           )
         )
         .limit(1);
-      if (!existing) {
-        return new Response(
-          JSON.stringify({ error: { code: "NOT_FOUND", message: "Evaluation not found" } }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      const updates: Partial<typeof evaluations.$inferInsert> = {};
-      if (body.evaluatedAt !== undefined) updates.evaluatedAt = new Date(body.evaluatedAt);
+      if (!existing) return status(404, { message: "Not found" });
+      const updates: { evaluatedAt?: Date } = {};
+      if (body.evaluatedAt) updates.evaluatedAt = new Date(body.evaluatedAt);
       if (Object.keys(updates).length > 0) {
         await db
           .update(evaluations)
           .set(updates)
-          .where(eq(evaluations.id, params.evaluationId));
+          .where(eq(evaluations.id, evaluationId));
       }
-      if (body.results?.length) {
+      if (body.results) {
         await db
           .delete(evaluationResults)
-          .where(eq(evaluationResults.evaluationId, params.evaluationId));
-        await db.insert(evaluationResults).values(
-          body.results.map((r: { sportMetricId: string; value: string }) => ({
-            evaluationId: params.evaluationId,
-            sportMetricId: r.sportMetricId,
-            value: r.value,
-            createdAt: new Date(),
-          }))
-        );
+          .where(eq(evaluationResults.evaluationId, evaluationId));
+        const now = new Date();
+        if (body.results.length > 0) {
+          await db.insert(evaluationResults).values(
+            body.results.map((r: { sportMetricId: string; value: string }) => ({
+              evaluationId,
+              sportMetricId: r.sportMetricId,
+              value: r.value,
+              createdAt: now,
+            }))
+          );
+        }
       }
       const [updated] = await db
         .select()
         .from(evaluations)
-        .where(eq(evaluations.id, params.evaluationId))
+        .where(eq(evaluations.id, evaluationId))
         .limit(1);
       const results = await db
         .select()
         .from(evaluationResults)
-        .where(eq(evaluationResults.evaluationId, params.evaluationId));
-      return { data: { ...updated!, results } };
+        .where(eq(evaluationResults.evaluationId, evaluationId));
+      return { ...updated, results };
     },
     {
       body: t.Object({
         evaluatedAt: t.Optional(t.String()),
         results: t.Optional(
-          t.Array(t.Object({ sportMetricId: t.String(), value: t.String() }))
+          t.Array(
+            t.Object({
+              sportMetricId: t.String(),
+              value: t.String(),
+            })
+          )
         ),
       }),
-      detail: { tags: ["Evaluations"], summary: "Update evaluation" },
     }
   )
   .delete(
-    "/organizations/:organizationId/members/:memberId/evaluations/:evaluationId",
-    async ({ member, organizationId, params }) => {
-      if (!member || !organizationId) throw new Error("Guard should ensure member");
-      if (!canAccessMember(member, params.memberId)) {
-        return new Response(
-          JSON.stringify({ error: { code: "FORBIDDEN", message: "Cannot access this member" } }),
-          { status: 403, headers: { "Content-Type": "application/json" } }
-        );
+    "/members/:memberId/evaluations/:evaluationId",
+    async (ctx) => {
+      const { params, member, status } = ctx as typeof ctx & ApiContextAdd;
+      const { memberId, evaluationId } = params;
+      if (!canAccessMember(member, memberId)) {
+        return status(403, { message: "Forbidden" });
       }
       const [existing] = await db
         .select()
         .from(evaluations)
         .where(
           and(
-            eq(evaluations.id, params.evaluationId),
-            eq(evaluations.memberId, params.memberId)
+            eq(evaluations.id, evaluationId),
+            eq(evaluations.memberId, memberId)
           )
         )
         .limit(1);
-      if (!existing) {
-        return new Response(
-          JSON.stringify({ error: { code: "NOT_FOUND", message: "Evaluation not found" } }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      await db.delete(evaluations).where(eq(evaluations.id, params.evaluationId));
-      return { data: { id: params.evaluationId, deleted: true } };
-    },
-    { detail: { tags: ["Evaluations"], summary: "Delete evaluation" } }
+      if (!existing) return status(404, { message: "Not found" });
+      await db.delete(evaluations).where(eq(evaluations.id, evaluationId));
+      return { success: true };
+    }
   );
