@@ -6,7 +6,6 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "bun run --parallel dev:api dev:web",
         "dev:api": "bun run --cwd apps/api dev",
         "dev:web": "bun run --cwd apps/web --bun dev",
         "db:generate": "bun run --cwd apps/api db:generate",

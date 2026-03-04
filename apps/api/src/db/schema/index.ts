@@ -1,19 +1,31 @@
-export * from "./auth";
-export * from "./sports";
-export * from "./evaluations";
-export * from "./health";
-export * from "./nutrition";
-
-import * as auth from "./auth";
-import * as sports from "./sports";
-import * as evaluations from "./evaluations";
-import * as health from "./health";
-import * as nutrition from "./nutrition";
+import { accounts } from "./auth/accounts";
+import { invitations } from "./auth/invitations";
+import { members } from "./auth/members";
+import { organizations } from "./auth/organizations";
+import {
+  accountsRelations,
+  invitationsRelations,
+  membersRelations,
+  organizationsRelations,
+  sessionsRelations,
+  usersRelations,
+} from "./auth/relations";
+import { sessions } from "./auth/sessions";
+import { users } from "./auth/users";
+import { verifications } from "./auth/verifications";
 
 export const schema = {
-  ...auth,
-  ...sports,
-  ...evaluations,
-  ...health,
-  ...nutrition,
+  users,
+  accounts,
+  sessions,
+  invitations,
+  members,
+  organizations,
+  verifications,
+  usersRelations,
+  accountsRelations,
+  sessionsRelations,
+  invitationsRelations,
+  membersRelations,
+  organizationsRelations,
 };

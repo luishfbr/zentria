@@ -1,31 +1,38 @@
-import { Link } from '@tanstack/react-router'
-import { Menu } from 'lucide-react'
-import { useState } from 'react'
+import { Link } from "@tanstack/react-router";
+import { Menu } from "lucide-react";
+import { useState } from "react";
 
-import ThemeToggle from '#/components/ThemeToggle'
-import { Button } from '#/components/ui/button'
+import ThemeToggle from "#/components/ThemeToggle";
+import { Button } from "#/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '#/components/ui/sheet'
-import { cn } from '#/lib/utils'
+} from "#/components/ui/sheet";
+import { cn } from "#/lib/utils";
+import type { User } from "better-auth";
 
 const navLinks = [
-  { label: 'Funcionalidades', href: '#funcionalidades' },
-  { label: 'Planos', href: '#planos' },
-] as const
+  { label: "Funcionalidades", href: "#funcionalidades" },
+  { label: "Planos", href: "#planos" },
+] as const;
 
-export function LandingHeader({ className }: { className?: string }) {
-  const [open, setOpen] = useState(false)
+export function LandingHeader({
+  className,
+  user,
+}: {
+  className?: string;
+  user?: User;
+}) {
+  const [open, setOpen] = useState(false);
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
-        className
+        "sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        className,
       )}
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -46,16 +53,39 @@ export function LandingHeader({ className }: { className?: string }) {
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <Button variant="ghost" size="sm" className="min-h-10 min-w-10 shrink-0 px-2 text-sm sm:min-w-0 sm:px-3" asChild>
-            <Link to="/login">Entrar</Link>
-          </Button>
-          <Button size="sm" className="min-h-10 min-w-10 shrink-0 px-2 text-sm sm:min-w-0 sm:px-3" asChild>
-            <Link to="/signup">Começar</Link>
-          </Button>
           <ThemeToggle />
+          {!user ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="min-h-10 min-w-10 shrink-0 px-2 text-sm sm:min-w-0 sm:px-3"
+                asChild
+              >
+                <Link to="/signin">Entrar</Link>
+              </Button>
+              <Button
+                size="sm"
+                className="min-h-10 min-w-10 shrink-0 px-2 text-sm sm:min-w-0 sm:px-3"
+                asChild
+              >
+                <Link to="/signup">Começar</Link>
+              </Button>
+            </>
+          ) : (
+            <Button asChild>
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
+          )}
+
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="min-h-10 min-w-10 md:hidden" aria-label="Abrir menu">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-10 min-w-10 md:hidden"
+                aria-label="Abrir menu"
+              >
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
@@ -76,7 +106,7 @@ export function LandingHeader({ className }: { className?: string }) {
                 ))}
                 <div className="flex flex-col gap-3 pt-4">
                   <Button variant="outline" className="min-h-11 w-full" asChild>
-                    <Link to="/login" onClick={() => setOpen(false)}>
+                    <Link to="/signin" onClick={() => setOpen(false)}>
                       Entrar
                     </Link>
                   </Button>
@@ -92,5 +122,5 @@ export function LandingHeader({ className }: { className?: string }) {
         </div>
       </div>
     </header>
-  )
+  );
 }

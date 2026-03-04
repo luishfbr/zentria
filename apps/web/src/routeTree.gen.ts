@@ -9,72 +9,187 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminSigninRouteImport } from './routes/admin/signin'
+import { Route as dashboardPathlessLayoutRouteImport } from './routes/(dashboard)/_pathlessLayout'
+import { Route as authSendResetPasswordRouteImport } from './routes/(auth)/send-reset-password'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
+import { Route as authPathlessLayoutRouteImport } from './routes/(auth)/_pathlessLayout'
+import { Route as AdminDashboardPathlessLayoutRouteImport } from './routes/admin/dashboard/_pathlessLayout'
+import { Route as dashboardPathlessLayoutPortalSettingsRouteImport } from './routes/(dashboard)/_pathlessLayout.portal-settings'
+import { Route as dashboardPathlessLayoutDashboardRouteImport } from './routes/(dashboard)/_pathlessLayout.dashboard'
+import { Route as authPathlessLayoutSignupRouteImport } from './routes/(auth)/_pathlessLayout.signup'
+import { Route as authPathlessLayoutSigninRouteImport } from './routes/(auth)/_pathlessLayout.signin'
+import { Route as AdminDashboardPathlessLayoutIndexRouteImport } from './routes/admin/dashboard/_pathlessLayout.index'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSigninRoute = AdminSigninRouteImport.update({
+  id: '/admin/signin',
+  path: '/admin/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const dashboardPathlessLayoutRoute = dashboardPathlessLayoutRouteImport.update({
+  id: '/(dashboard)/_pathlessLayout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSendResetPasswordRoute = authSendResetPasswordRouteImport.update({
+  id: '/(auth)/send-reset-password',
+  path: '/send-reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
+  id: '/(auth)/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authPathlessLayoutRoute = authPathlessLayoutRouteImport.update({
+  id: '/(auth)/_pathlessLayout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardPathlessLayoutRoute =
+  AdminDashboardPathlessLayoutRouteImport.update({
+    id: '/admin/dashboard/_pathlessLayout',
+    path: '/admin/dashboard',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const dashboardPathlessLayoutPortalSettingsRoute =
+  dashboardPathlessLayoutPortalSettingsRouteImport.update({
+    id: '/portal-settings',
+    path: '/portal-settings',
+    getParentRoute: () => dashboardPathlessLayoutRoute,
+  } as any)
+const dashboardPathlessLayoutDashboardRoute =
+  dashboardPathlessLayoutDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => dashboardPathlessLayoutRoute,
+  } as any)
+const authPathlessLayoutSignupRoute =
+  authPathlessLayoutSignupRouteImport.update({
+    id: '/signup',
+    path: '/signup',
+    getParentRoute: () => authPathlessLayoutRoute,
+  } as any)
+const authPathlessLayoutSigninRoute =
+  authPathlessLayoutSigninRouteImport.update({
+    id: '/signin',
+    path: '/signin',
+    getParentRoute: () => authPathlessLayoutRoute,
+  } as any)
+const AdminDashboardPathlessLayoutIndexRoute =
+  AdminDashboardPathlessLayoutIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminDashboardPathlessLayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/send-reset-password': typeof authSendResetPasswordRoute
+  '/admin/signin': typeof AdminSigninRoute
+  '/admin/': typeof AdminIndexRoute
+  '/signin': typeof authPathlessLayoutSigninRoute
+  '/signup': typeof authPathlessLayoutSignupRoute
+  '/dashboard': typeof dashboardPathlessLayoutDashboardRoute
+  '/portal-settings': typeof dashboardPathlessLayoutPortalSettingsRoute
+  '/admin/dashboard': typeof AdminDashboardPathlessLayoutRouteWithChildren
+  '/admin/dashboard/': typeof AdminDashboardPathlessLayoutIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/send-reset-password': typeof authSendResetPasswordRoute
+  '/admin/signin': typeof AdminSigninRoute
+  '/admin': typeof AdminIndexRoute
+  '/signin': typeof authPathlessLayoutSigninRoute
+  '/signup': typeof authPathlessLayoutSignupRoute
+  '/dashboard': typeof dashboardPathlessLayoutDashboardRoute
+  '/portal-settings': typeof dashboardPathlessLayoutPortalSettingsRoute
+  '/admin/dashboard': typeof AdminDashboardPathlessLayoutIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/(auth)/_pathlessLayout': typeof authPathlessLayoutRouteWithChildren
+  '/(auth)/reset-password': typeof authResetPasswordRoute
+  '/(auth)/send-reset-password': typeof authSendResetPasswordRoute
+  '/(dashboard)/_pathlessLayout': typeof dashboardPathlessLayoutRouteWithChildren
+  '/admin/signin': typeof AdminSigninRoute
+  '/admin/': typeof AdminIndexRoute
+  '/(auth)/_pathlessLayout/signin': typeof authPathlessLayoutSigninRoute
+  '/(auth)/_pathlessLayout/signup': typeof authPathlessLayoutSignupRoute
+  '/(dashboard)/_pathlessLayout/dashboard': typeof dashboardPathlessLayoutDashboardRoute
+  '/(dashboard)/_pathlessLayout/portal-settings': typeof dashboardPathlessLayoutPortalSettingsRoute
+  '/admin/dashboard/_pathlessLayout': typeof AdminDashboardPathlessLayoutRouteWithChildren
+  '/admin/dashboard/_pathlessLayout/': typeof AdminDashboardPathlessLayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup'
+  fullPaths:
+    | '/'
+    | '/reset-password'
+    | '/send-reset-password'
+    | '/admin/signin'
+    | '/admin/'
+    | '/signin'
+    | '/signup'
+    | '/dashboard'
+    | '/portal-settings'
+    | '/admin/dashboard'
+    | '/admin/dashboard/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup'
-  id: '__root__' | '/' | '/login' | '/signup'
+  to:
+    | '/'
+    | '/reset-password'
+    | '/send-reset-password'
+    | '/admin/signin'
+    | '/admin'
+    | '/signin'
+    | '/signup'
+    | '/dashboard'
+    | '/portal-settings'
+    | '/admin/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/(auth)/_pathlessLayout'
+    | '/(auth)/reset-password'
+    | '/(auth)/send-reset-password'
+    | '/(dashboard)/_pathlessLayout'
+    | '/admin/signin'
+    | '/admin/'
+    | '/(auth)/_pathlessLayout/signin'
+    | '/(auth)/_pathlessLayout/signup'
+    | '/(dashboard)/_pathlessLayout/dashboard'
+    | '/(dashboard)/_pathlessLayout/portal-settings'
+    | '/admin/dashboard/_pathlessLayout'
+    | '/admin/dashboard/_pathlessLayout/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
+  authPathlessLayoutRoute: typeof authPathlessLayoutRouteWithChildren
+  authResetPasswordRoute: typeof authResetPasswordRoute
+  authSendResetPasswordRoute: typeof authSendResetPasswordRoute
+  dashboardPathlessLayoutRoute: typeof dashboardPathlessLayoutRouteWithChildren
+  AdminSigninRoute: typeof AdminSigninRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminDashboardPathlessLayoutRoute: typeof AdminDashboardPathlessLayoutRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +197,149 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/signin': {
+      id: '/admin/signin'
+      path: '/admin/signin'
+      fullPath: '/admin/signin'
+      preLoaderRoute: typeof AdminSigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(dashboard)/_pathlessLayout': {
+      id: '/(dashboard)/_pathlessLayout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof dashboardPathlessLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/send-reset-password': {
+      id: '/(auth)/send-reset-password'
+      path: '/send-reset-password'
+      fullPath: '/send-reset-password'
+      preLoaderRoute: typeof authSendResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/_pathlessLayout': {
+      id: '/(auth)/_pathlessLayout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof authPathlessLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard/_pathlessLayout': {
+      id: '/admin/dashboard/_pathlessLayout'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardPathlessLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(dashboard)/_pathlessLayout/portal-settings': {
+      id: '/(dashboard)/_pathlessLayout/portal-settings'
+      path: '/portal-settings'
+      fullPath: '/portal-settings'
+      preLoaderRoute: typeof dashboardPathlessLayoutPortalSettingsRouteImport
+      parentRoute: typeof dashboardPathlessLayoutRoute
+    }
+    '/(dashboard)/_pathlessLayout/dashboard': {
+      id: '/(dashboard)/_pathlessLayout/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof dashboardPathlessLayoutDashboardRouteImport
+      parentRoute: typeof dashboardPathlessLayoutRoute
+    }
+    '/(auth)/_pathlessLayout/signup': {
+      id: '/(auth)/_pathlessLayout/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof authPathlessLayoutSignupRouteImport
+      parentRoute: typeof authPathlessLayoutRoute
+    }
+    '/(auth)/_pathlessLayout/signin': {
+      id: '/(auth)/_pathlessLayout/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof authPathlessLayoutSigninRouteImport
+      parentRoute: typeof authPathlessLayoutRoute
+    }
+    '/admin/dashboard/_pathlessLayout/': {
+      id: '/admin/dashboard/_pathlessLayout/'
+      path: '/'
+      fullPath: '/admin/dashboard/'
+      preLoaderRoute: typeof AdminDashboardPathlessLayoutIndexRouteImport
+      parentRoute: typeof AdminDashboardPathlessLayoutRoute
+    }
   }
 }
 
+interface authPathlessLayoutRouteChildren {
+  authPathlessLayoutSigninRoute: typeof authPathlessLayoutSigninRoute
+  authPathlessLayoutSignupRoute: typeof authPathlessLayoutSignupRoute
+}
+
+const authPathlessLayoutRouteChildren: authPathlessLayoutRouteChildren = {
+  authPathlessLayoutSigninRoute: authPathlessLayoutSigninRoute,
+  authPathlessLayoutSignupRoute: authPathlessLayoutSignupRoute,
+}
+
+const authPathlessLayoutRouteWithChildren =
+  authPathlessLayoutRoute._addFileChildren(authPathlessLayoutRouteChildren)
+
+interface dashboardPathlessLayoutRouteChildren {
+  dashboardPathlessLayoutDashboardRoute: typeof dashboardPathlessLayoutDashboardRoute
+  dashboardPathlessLayoutPortalSettingsRoute: typeof dashboardPathlessLayoutPortalSettingsRoute
+}
+
+const dashboardPathlessLayoutRouteChildren: dashboardPathlessLayoutRouteChildren =
+  {
+    dashboardPathlessLayoutDashboardRoute:
+      dashboardPathlessLayoutDashboardRoute,
+    dashboardPathlessLayoutPortalSettingsRoute:
+      dashboardPathlessLayoutPortalSettingsRoute,
+  }
+
+const dashboardPathlessLayoutRouteWithChildren =
+  dashboardPathlessLayoutRoute._addFileChildren(
+    dashboardPathlessLayoutRouteChildren,
+  )
+
+interface AdminDashboardPathlessLayoutRouteChildren {
+  AdminDashboardPathlessLayoutIndexRoute: typeof AdminDashboardPathlessLayoutIndexRoute
+}
+
+const AdminDashboardPathlessLayoutRouteChildren: AdminDashboardPathlessLayoutRouteChildren =
+  {
+    AdminDashboardPathlessLayoutIndexRoute:
+      AdminDashboardPathlessLayoutIndexRoute,
+  }
+
+const AdminDashboardPathlessLayoutRouteWithChildren =
+  AdminDashboardPathlessLayoutRoute._addFileChildren(
+    AdminDashboardPathlessLayoutRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
+  authPathlessLayoutRoute: authPathlessLayoutRouteWithChildren,
+  authResetPasswordRoute: authResetPasswordRoute,
+  authSendResetPasswordRoute: authSendResetPasswordRoute,
+  dashboardPathlessLayoutRoute: dashboardPathlessLayoutRouteWithChildren,
+  AdminSigninRoute: AdminSigninRoute,
+  AdminIndexRoute: AdminIndexRoute,
+  AdminDashboardPathlessLayoutRoute:
+    AdminDashboardPathlessLayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

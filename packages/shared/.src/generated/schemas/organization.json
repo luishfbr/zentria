@@ -1,1 +1,0 @@
-{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"slug":{"type":"string"},"logo":{"type":"string"},"createdAt":{"type":"string","format":"date-time"},"metadata":{"type":"string"}},"required":["name","slug","createdAt"],"x-readme-ref-name":"Organization"}

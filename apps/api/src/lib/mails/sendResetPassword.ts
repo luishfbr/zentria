@@ -1,12 +1,18 @@
 import { env } from "../env";
 import { transporter } from "../transporter";
 
-export async function SendResetPassword({ email, url }: { email: string, url: string }) {
-    await transporter.sendMail({
-        from: env.EMAIL_FROM,
-        to: email,
-        subject: "Redefinir sua senha - Zentria",
-        html: `
+export async function SendResetPassword({
+  email,
+  url,
+}: {
+  email: string;
+  url: string;
+}) {
+  await transporter.sendMail({
+    from: env.EMAIL_FROM,
+    to: email,
+    subject: "Redefinir sua senha - Zentria",
+    html: `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -44,5 +50,5 @@ export async function SendResetPassword({ email, url }: { email: string, url: st
 </body>
 </html>
         `,
-    });
+  });
 }

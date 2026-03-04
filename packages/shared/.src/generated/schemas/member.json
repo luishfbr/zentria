@@ -1,1 +1,0 @@
-{"type":"object","properties":{"id":{"type":"string"},"organizationId":{"type":"string"},"userId":{"type":"string"},"role":{"type":"string","default":"member"},"createdAt":{"type":"string","format":"date-time"}},"required":["organizationId","userId","role","createdAt"],"x-readme-ref-name":"Member"}

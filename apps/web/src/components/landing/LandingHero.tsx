@@ -25,7 +25,7 @@ export function LandingHero({ className }: { className?: string }) {
             <Link to="/signup">Começar grátis</Link>
           </Button>
           <Button size="lg" variant="outline" className="min-h-11 w-full rounded-xl py-3 sm:w-auto" asChild>
-            <Link to="/login">Já tenho conta</Link>
+            <Link to="/signin">Já tenho conta</Link>
           </Button>
         </div>
       </div>
